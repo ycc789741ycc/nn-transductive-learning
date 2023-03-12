@@ -1,0 +1,28 @@
+[tool.isort]
+profile = "black"
+
+[tool.black]
+line-length = 120
+skip_magic_trailing_comma = true  # For compatibility with pydoc>=4.6, check if still needed.
+experimental-string-processing = true
+
+[tool.poetry]
+name = "nn-transductive-learning"
+version = "0.1.0"
+description = ""
+authors = ["Yoshi Gao <yoshi4868686@gmail.com>"]
+readme = "README.md"
+packages = [{include = "nn_transductive_learning"}]
+
+[tool.poetry.dependencies]
+python = "^3.9"
+
+
+[tool.poetry.group.dev.dependencies]
+black = "^23.1.0"
+isort = "^5.12.0"
+pre-commit = "^3.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
