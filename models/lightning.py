@@ -57,15 +57,21 @@ class LightningTransductiveLearner(TransductiveLearner):
 
 
 class LightningNNClassifier(pl.LightningModule):
-    def __init__(self, model_config: ModelConfig) -> None:
+    def __init__(self, model_config: ModelConfig, learning_rate: float = 1e-3) -> None:
+        super().__init__()
         self.model_config = model_config
-        for i, layer in enumerate(self.model_config["fully-connected-layers"]):
-            setattr(self, f"linear_{i}", nn.Linear(layer["input"], layer["output"]))
-            setattr(self, f"dropout_{i}", nn.Dropout(layer["dropout"]))
+        self.learning_rate = learning_rate
+        self.fully_connected_layers = nn.Sequential(
+            *[
+                nn.Sequential(
+                    nn.Linear(layer["input"], layer["output"]), nn.LeakyReLU(0.2), nn.Dropout(layer["dropout"])
+                )
+                for layer in self.model_config["fully-connected-layers"]
+            ]
+        )
         self.linear_output = nn.Linear(
             self.model_config["output-layer"]["input"], self.model_config["output-layer"]["output"]
         )
-        self.activator = nn.LeakyReLU(0.2)
         self.loss_criterion = torch.nn.BCELoss()
 
     def accuracy(self, y_pred, y_true):
@@ -75,10 +81,7 @@ class LightningNNClassifier(pl.LightningModule):
         return res
 
     def forward(self, x: torch.Tensor):
-        for i in range(len(self.model_config["fully-connected-layers"])):
-            x = getattr(self, f"linear_{i}")(x)
-            x = getattr(self, f"dropout_{i}")(x)
-            x = self.activator(x)
+        x = self.fully_connected_layers(x)
         x = self.linear_output(x)
         return x
 

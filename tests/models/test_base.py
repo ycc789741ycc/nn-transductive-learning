@@ -20,7 +20,7 @@ def test_run():
     X_labeled -= 70000
     y_labeled = np.zeros(10)
     X_unlabeled = np.arange(0, 144000).reshape(10, 14400)
-    transductive_learner = MockTestTransductiveLearner(X_labeled, y_labeled, X_unlabeled, "./model_config.yml")
+    transductive_learner = MockTestTransductiveLearner(X_labeled, y_labeled, X_unlabeled, "./config/model_config.yml")
     X_df, y_df = transductive_learner.run()
 
     assert X_df.shape == (10, 14401)
