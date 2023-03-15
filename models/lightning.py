@@ -32,13 +32,19 @@ class LightningTransductiveLearner(TransductiveLearner):
 
     def _training(self, X_train: np.ndarray, X_valid: np.ndarray, y_train: np.ndarray, y_valid: np.ndarray) -> None:
         train_dataloader = DataLoader(
-            dataset=TensorDataset(torch.from_numpy(X_train), torch.from_numpy(y_train)),
+            dataset=TensorDataset(
+                torch.from_numpy(X_train).to(dtype=torch.float32),
+                torch.from_numpy(y_train[:, np.newaxis]).to(torch.float32),
+            ),
             batch_size=self.batch_size,
             num_workers=os.cpu_count(),
             shuffle=True,
         )
         valid_dataloader = DataLoader(
-            dataset=TensorDataset(torch.from_numpy(X_valid), torch.from_numpy(y_valid)),
+            dataset=TensorDataset(
+                torch.from_numpy(X_valid).to(dtype=torch.float32),
+                torch.from_numpy(y_valid[:, np.newaxis]).to(torch.float32),
+            ),
             batch_size=self.batch_size,
             num_workers=os.cpu_count(),
             shuffle=True,
@@ -52,8 +58,19 @@ class LightningTransductiveLearner(TransductiveLearner):
         self.best_model_path = checkpoint_callback.best_model_path
 
     def _inference(self, X_unlabeled: np.ndarray) -> np.ndarray:
-        model = LightningNNClassifier.load_from_checkpoint(self.best_model_path)
-        return model(torch.tensor(X_unlabeled)).detach().numpy()
+        model = LightningNNClassifier.load_from_checkpoint(self.best_model_path, model_config=self.model_config)
+        return np.squeeze(model(torch.tensor(X_unlabeled).to(dtype=torch.float32)).detach().numpy())
+
+
+class HingeLoss(pl.LightningModule):
+    def __init__(self):
+        super(HingeLoss, self).__init__()
+
+    def forward(self, output, target):
+
+        hinge_loss = 1 - torch.mul(output, target)
+        hinge_loss[hinge_loss < 0] = 0
+        return torch.mean(hinge_loss)
 
 
 class LightningNNClassifier(pl.LightningModule):
@@ -72,7 +89,7 @@ class LightningNNClassifier(pl.LightningModule):
         self.linear_output = nn.Linear(
             self.model_config["output-layer"]["input"], self.model_config["output-layer"]["output"]
         )
-        self.loss_criterion = torch.nn.BCELoss()
+        self.loss_criterion = HingeLoss()
 
     def accuracy(self, y_pred, y_true):
         y_pred[y_pred >= 0.0] = 1.0
