@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Text, Tuple
+from typing import Text, Tuple, TypeVar
 
 import numpy as np
 import pandas as pd
@@ -9,16 +9,31 @@ from sklearn.model_selection import train_test_split
 ITERATION = 10
 LABEL_NUMBER = 1000
 
+ModelConfig = TypeVar("ModelConfig", bound=dict)
+
 
 class TransductiveLearner(ABC):
     def __init__(
         self, X_labeled: np.ndarray, y_labeled: np.ndarray, X_unlabeled: np.ndarray, model_config_path: Text
     ) -> None:
         with open(model_config_path, "r") as f:
-            self.model_config = yaml.load(f, yaml.CLoader)
+            self.model_config: ModelConfig = yaml.load(f, yaml.CLoader)
+        self._validate_model_config()
         self.X_labeled = X_labeled
         self.y_labeled = y_labeled
         self.X_unlabeled = X_unlabeled
+
+    def _validate_model_config(self) -> None:
+        prev_output_size = self.model_config["fully-connected-layers"][0]["output"]
+        for layer in self.model_config["fully-connected-layers"][1:]:
+            if prev_output_size != layer["input"]:
+                raise ValueError("Input size of layer is not equal to output size of previous layer.")
+            prev_output_size = layer["output"]
+
+        if prev_output_size != self.model_config["output-layer"]["input"]:
+            raise ValueError("Input size of output layer is not equal to output size of previous layer.")
+        if self.model_config["output-layer"]["output"] != 1:
+            raise ValueError("Output size of output layer is not equal to 1.")
 
     def run(self, iteration: int = ITERATION, label_number: int = LABEL_NUMBER) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Run transductive learning to get the most confidence labeled data.
