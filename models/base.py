@@ -19,56 +19,63 @@ class TransductiveLearner(ABC):
         self.X_labeled = X_labeled
         self.y_labeled = y_labeled
         self.X_unlabeled = X_unlabeled
-        self.model_labeled_indices = np.array([])
 
-    def run(self, iteration: int = ITERATION, label_number: int = LABEL_NUMBER) -> pd.DataFrame:
-        """Labeling unlabeled data.
+    def run(self, iteration: int = ITERATION, label_number: int = LABEL_NUMBER) -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """Run transductive learning to get the most confidence labeled data.
+
+        Args:
+            iteration (int, optional): Times of the iteration. Defaults to ITERATION.
+            label_number (int, optional): Final return label number. Defaults to LABEL_NUMBER.
 
         Returns:
-            pd.DataFrame: model labeled indices, model labeled X, model labeled y.
+            Tuple[pd.DataFrame, pd.DataFrame]: labeled data, labeled data label.
         """
+
         select_number = label_number // iteration
-        X_labeled_ = self.X_labeled
-        y_labeled_ = self.y_labeled
+        X_labeled_ = self.X_labeled.copy()
+        y_labeled_ = self.y_labeled.copy()
         unlabeled_mask = np.array([False] * self.X_unlabeled.shape[0])
 
-        labeled_indices = np.array([])
-        labeled_X = np.array([])
-        labeled_y = np.array([])
-        np.array([])
+        all_labeled_indices = np.array([])
+        all_model_labeled_X = np.empty((0, *X_labeled_.shape[1:]))
+        all_model_labeled_y = np.empty((0, *y_labeled_.shape[1:]))
         for _ in range(iteration):
             X_train, X_valid, y_train, y_valid = train_test_split(X_labeled_, y_labeled_, test_size=0.2)
-            self.training(X_train, X_valid, y_train, y_valid)
-            model_labeled_indices, model_labeled_X, model_labeled_y = self.get_most_confidence_labeled_data(
+            self._training(X_train, X_valid, y_train, y_valid)
+            model_labeled_indices, model_labeled_X, model_labeled_y = self._get_most_confidence_labeled_data(
                 self.X_unlabeled, unlabeled_mask, select_number
             )
             unlabeled_mask[model_labeled_indices] = True
-            X_labeled_ = np.concatenate([X_labeled_, model_labeled_X])
-            y_labeled_ = np.concatenate([y_labeled_, model_labeled_y])
+            X_labeled_ = np.append(X_labeled_, model_labeled_X, axis=0)
+            y_labeled_ = np.append(y_labeled_, model_labeled_y, axis=0)
 
-            labeled_indices = np.concatenate([labeled_indices, model_labeled_indices])
-            labeled_X = np.concatenate([labeled_X, model_labeled_X])
-            labeled_y = np.concatenate([labeled_y, model_labeled_y])
+            all_labeled_indices = np.append(all_labeled_indices, model_labeled_indices, axis=0)
+            all_model_labeled_X = np.append(all_model_labeled_X, model_labeled_X, axis=0)
+            all_model_labeled_y = np.append(all_model_labeled_y, model_labeled_y, axis=0)
 
-        return pd.DataFrame({"id": labeled_indices, "X": labeled_X, "y": labeled_y})
+        all_model_labeled_X_df = pd.DataFrame({"id": all_labeled_indices})
+        X_df = pd.DataFrame({f"X_{i}": all_model_labeled_X[:, i] for i in range(all_model_labeled_X.shape[-1])})
+        all_model_labeled_X_df = pd.concat([all_model_labeled_X_df, X_df], axis=1)
+        all_model_labeled_y_df = pd.DataFrame({"id": all_labeled_indices, "y": all_model_labeled_y})
+        return all_model_labeled_X_df, all_model_labeled_y_df
 
     @abstractmethod
-    def training(self, X_train: np.ndarray, X_valid: np.ndarray, y_train: np.ndarray, y_valid: np.ndarray) -> None:
+    def _training(self, X_train: np.ndarray, X_valid: np.ndarray, y_train: np.ndarray, y_valid: np.ndarray) -> None:
         """Training model."""
 
         raise NotImplementedError
 
     @abstractmethod
-    def inference(self, X_unlabeled: np.ndarray) -> np.ndarray:
-        """Inference the X_unlabeled.
+    def _inference(self, X_unlabeled: np.ndarray) -> np.ndarray:
+        """Inference the X_unlabeled using SVM.
 
         Returns:
-            np.ndarray: Inference result.
+            np.ndarray: Inference result, (-inf, inf).
         """
 
         raise NotImplementedError
 
-    def get_most_confidence_labeled_data(
+    def _get_most_confidence_labeled_data(
         self, X_unlabeled: np.ndarray, mask: np.ndarray, top_k: int
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """Get the most confidence model labeled data.
@@ -81,13 +88,13 @@ class TransductiveLearner(ABC):
             Tuple[np.ndarray, np.ndarray]: model labeled data indices, model labeled data, label.
         """
 
-        outputs: np.ndarray = self.inference(X_unlabeled[~mask])
-        outputs_confidence = np.sum(np.absolute(outputs), axis=1)
+        outputs: np.ndarray = self._inference(X_unlabeled[~mask])
+        outputs_confidence = np.absolute(outputs)
         top_k_confident_slice: list = np.argsort(-outputs_confidence)[:top_k]
 
         top_k_label: np.ndarray = outputs[top_k_confident_slice]
         top_k_label[top_k_label > 0] = 1
         top_k_label[~(top_k_label > 0)] = 0
-        top_k_labeled_data = X_unlabeled[top_k_confident_slice]
+        top_k_labeled_data = X_unlabeled[~mask][top_k_confident_slice]
 
-        return np.where(~mask)[top_k_confident_slice], top_k_labeled_data, top_k_label
+        return np.where(~mask)[0][top_k_confident_slice], top_k_labeled_data, top_k_label
