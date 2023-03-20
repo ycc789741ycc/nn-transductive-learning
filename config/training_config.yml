@@ -1,0 +1,7 @@
+batch_size: 64
+
+max_epochs: 100
+
+transductive_learning_iterartion: 3
+
+label_data_number: 1000

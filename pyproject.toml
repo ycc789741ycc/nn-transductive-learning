@@ -6,6 +6,10 @@ line-length = 120
 skip_magic_trailing_comma = true  # For compatibility with pydoc>=4.6, check if still needed.
 experimental-string-processing = true
 
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+
 [tool.poetry]
 name = "nn-transductive-learning"
 version = "0.1.0"

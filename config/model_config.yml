@@ -1,0 +1,16 @@
+fully-connected-layers:
+  - input: 14400
+    output: 512
+    dropout: 0.5
+
+  - input: 512
+    output: 256
+    dropout: 0.5
+
+  - input: 256
+    output: 64
+    dropout: 0.5
+
+output-layer:
+  input: 64
+  output: 1
