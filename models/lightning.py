@@ -6,7 +6,6 @@ import numpy as np
 import pytorch_lightning as pl
 import torch
 import torch.nn as nn
-import yaml
 from pytorch_lightning.callbacks import EarlyStopping, ModelCheckpoint
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -22,13 +21,12 @@ class LightningTransductiveLearner(TransductiveLearner):
         y_labeled: np.ndarray,
         X_unlabeled: np.ndarray,
         model_config_path: Text,
-        training_config_path: Text,
+        batch_size: int,
+        max_epochs: int,
     ) -> None:
         super().__init__(X_labeled, y_labeled, X_unlabeled, model_config_path)
-        with open(training_config_path, "r") as f:
-            training_config: Dict = yaml.load(f, yaml.CLoader)
-            self.batch_size = training_config["batch_size"]
-            self.max_epochs = training_config["max_epochs"]
+        self.batch_size = batch_size
+        self.max_epochs = max_epochs
 
     def _training(self, X_train: np.ndarray, X_valid: np.ndarray, y_train: np.ndarray, y_valid: np.ndarray) -> None:
         train_dataloader = DataLoader(

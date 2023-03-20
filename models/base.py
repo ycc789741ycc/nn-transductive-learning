@@ -6,8 +6,8 @@ import pandas as pd
 import yaml
 from sklearn.model_selection import train_test_split
 
-ITERATION = 10
-LABEL_NUMBER = 1000
+DEFAULT_ITERATION = 10
+DEFAULT_LABEL_NUMBER = 1000
 
 ModelConfig = TypeVar("ModelConfig", bound=dict)
 
@@ -35,7 +35,9 @@ class TransductiveLearner(ABC):
         if self.model_config["output-layer"]["output"] != 1:
             raise ValueError("Output size of output layer is not equal to 1.")
 
-    def run(self, iteration: int = ITERATION, label_number: int = LABEL_NUMBER) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    def run(
+        self, iteration: int = DEFAULT_ITERATION, label_number: int = DEFAULT_LABEL_NUMBER
+    ) -> Tuple[pd.DataFrame, pd.DataFrame]:
         """Run transductive learning to get the most confidence labeled data.
 
         Args:
