@@ -1,9 +1,11 @@
 import argparse
 from typing import Dict, Text, Tuple
 
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import yaml
+from sklearn.decomposition import PCA
 
 from models.lightning import LightningTransductiveLearner
 
@@ -93,22 +95,106 @@ def get_labeled_data_from_transductive_learning(
     return X_model_labeled, y_model_labeled
 
 
-def t_sne_visualization(
+def data_visualization(
     X_labeled: np.ndarray,
     y_labeled: np.ndarray,
     X_model_labeled: np.ndarray,
-    y_model_unlabeled: np.ndarray,
+    y_model_labeled: np.ndarray,
     output_dir: Text,
 ) -> None:
-    """t-SNE visualization."""
+    """data visualization."""
 
+    pca_visualization(X_labeled, y_labeled, X_model_labeled, y_model_labeled, output_dir)
+    tsne_visualization(X_labeled, y_labeled, X_model_labeled, y_model_labeled, output_dir)
+
+
+def pca_visualization(
+    X_labeled: np.ndarray,
+    y_labeled: np.ndarray,
+    X_model_labeled: np.ndarray,
+    y_model_labeled: np.ndarray,
+    output_dir: Text,
+) -> None:
+    """PCA visualization."""
+
+    pca = PCA(n_components=3)
+    pca.fit(X_labeled)
+    X_pca = pca.fit_transform(np.concatenate([X_labeled, X_model_labeled], axis=0))
+
+    fig = plt.figure(figsize=(8, 6))
+    ax = fig.add_subplot(projection="3d")
+    X_labeled_size = len(X_labeled)
+    ax.scatter(
+        X_pca[:X_labeled_size, 0][y_labeled == 0],
+        X_pca[:X_labeled_size, 1][y_labeled == 0],
+        X_pca[:X_labeled_size, 2][y_labeled == 0],
+        alpha=0.2,
+        color="blue",
+        label="labeled data 0",
+    )
+    ax.scatter(
+        X_pca[:X_labeled_size, 0][y_labeled == 1],
+        X_pca[:X_labeled_size, 1][y_labeled == 1],
+        X_pca[:X_labeled_size, 2][y_labeled == 1],
+        alpha=0.2,
+        color="red",
+        label="labeled data 1",
+    )
+    ax.scatter(
+        X_pca[X_labeled_size:, 0][y_model_labeled == 0],
+        X_pca[X_labeled_size:, 1][y_model_labeled == 0],
+        X_pca[X_labeled_size:, 2][y_model_labeled == 0],
+        alpha=0.2,
+        color="purple",
+        label="model labeled data 0",
+    )
+    ax.scatter(
+        X_pca[X_labeled_size:, 0][y_model_labeled == 1],
+        X_pca[X_labeled_size:, 1][y_model_labeled == 1],
+        X_pca[X_labeled_size:, 2][y_model_labeled == 1],
+        alpha=0.2,
+        color="orange",
+        label="model labeled data 1",
+    )
+
+    ax.set_title("PCA visualization")
+    ax.legend()
+    fig.savefig("pca_visualization.png")
+
+
+def tsne_visualization(
+    X_labeled: np.ndarray,
+    y_labeled: np.ndarray,
+    X_model_labeled: np.ndarray,
+    y_model_labeled: np.ndarray,
+    output_dir: Text,
+) -> None:
+    """tsne visualization."""
     pass
 
 
-if __name__ == "__main__":
+def main():
     arg_parser = create_argument_parser()
     X_labeled, y_labeled, X_unlabeled = get_data_from_parser(arg_parser)
     X_model_labeld, y_model_labeled = get_labeled_data_from_transductive_learning(
         X_labeled, y_labeled, X_unlabeled, TRAINING_CONFIG_PATH, arg_parser.parse_args().o
     )
-    t_sne_visualization(X_labeled, y_labeled, X_model_labeld, y_model_labeled, arg_parser.parse_args().o)
+    data_visualization(X_labeled, y_labeled, X_model_labeld, y_model_labeled, arg_parser.parse_args().o)
+
+
+def dev_pca():
+    X_labeled = pd.read_pickle("data/X_labeled.pkl").to_numpy(dtype=np.float32)
+    y_labeled = pd.read_pickle("data/y_labeled.pkl").to_numpy(dtype=np.float32)[:, 0]
+    X_model_labeled_df = pd.read_pickle("outputs/X_model_labeled.pkl")
+    X_model_labeled_df.pop("id")
+    X_model_labeled = X_model_labeled_df.to_numpy(dtype=np.float32)
+    y_model_labeled_df = pd.read_pickle("outputs/y_model_labeled.pkl")
+    y_model_labeled_df.pop("id")
+    y_model_labeled = y_model_labeled_df.to_numpy(dtype=np.float32)[:, 0]
+
+    pca_visualization(X_labeled, y_labeled, X_model_labeled, y_model_labeled, "outputs")
+
+
+if __name__ == "__main__":
+    # main()
+    dev_pca()
