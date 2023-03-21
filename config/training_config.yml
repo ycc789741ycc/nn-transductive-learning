@@ -1,6 +1,6 @@
 batch_size: 64
 
-max_epochs: 100
+max_epochs: 20
 
 transductive_learning_iterartion: 3
 
