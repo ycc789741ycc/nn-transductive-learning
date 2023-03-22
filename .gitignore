@@ -160,5 +160,4 @@ cython_debug/
 #.idea/
 
 **/tmp/*
-**/data/*
 **/lightning_logs/*
