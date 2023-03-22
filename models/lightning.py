@@ -29,6 +29,9 @@ class LightningTransductiveLearner(TransductiveLearner):
         self.max_epochs = max_epochs
 
     def _training(self, X_train: np.ndarray, X_valid: np.ndarray, y_train: np.ndarray, y_valid: np.ndarray) -> None:
+        y_train[y_train == 0.0] = -1.0
+        y_valid[y_valid == 0.0] = -1.0
+
         train_dataloader = DataLoader(
             dataset=TensorDataset(
                 torch.from_numpy(X_train).to(dtype=torch.float32),
@@ -51,9 +54,19 @@ class LightningTransductiveLearner(TransductiveLearner):
         model = LightningNNClassifier(self.model_config)
         checkpoint_callback = ModelCheckpoint(save_top_k=1, verbose=True, monitor="valid_acc", mode="max")
         early_stopping = EarlyStopping(monitor="valid_acc", patience=5, mode="max", verbose=True)
-        trainer = pl.Trainer(max_epochs=self.max_epochs, callbacks=[checkpoint_callback, early_stopping])
+        # trainer = pl.Trainer(max_epochs=self.max_epochs, callbacks=[checkpoint_callback, early_stopping])
+        trainer = pl.Trainer(
+            max_epochs=self.max_epochs, callbacks=[checkpoint_callback, early_stopping], overfit_batches=0.2
+        )
         trainer.fit(model=model, train_dataloaders=train_dataloader, val_dataloaders=valid_dataloader)
         self.best_model_path = checkpoint_callback.best_model_path
+
+        model = LightningNNClassifier.load_from_checkpoint(self.best_model_path, model_config=self.model_config)
+        model = model.eval()
+        logger.info("Test on train data")
+        trainer.test(model=model, dataloaders=train_dataloader)
+        logger.info("Test on valid data")
+        trainer.test(model=model, dataloaders=valid_dataloader)
 
     def _inference(self, X_unlabeled: np.ndarray) -> np.ndarray:
         model = LightningNNClassifier.load_from_checkpoint(self.best_model_path, model_config=self.model_config)
@@ -79,7 +92,10 @@ class LightningNNClassifier(pl.LightningModule):
         self.fully_connected_layers = nn.Sequential(
             *[
                 nn.Sequential(
-                    nn.Linear(layer["input"], layer["output"]), nn.LeakyReLU(0.2), nn.Dropout(layer["dropout"])
+                    nn.Linear(layer["input"], layer["output"]),
+                    nn.LayerNorm(layer["output"]),
+                    nn.LeakyReLU(0.2),
+                    nn.Dropout(layer["dropout"]),
                 )
                 for layer in self.model_config["fully-connected-layers"]
             ]

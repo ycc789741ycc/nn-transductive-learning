@@ -16,13 +16,13 @@ class MockTestTransductiveLearner(TransductiveLearner):
 
 
 def test_run():
-    X_labeled = np.arange(0, 144000).reshape(10, 14400)
+    X_labeled = np.arange(0, 5760).reshape(10, 576)
     X_labeled -= 70000
-    y_labeled = np.zeros(10)
-    X_unlabeled = np.arange(0, 144000).reshape(10, 14400)
+    y_labeled = np.ones(10)
+    X_unlabeled = np.arange(0, 5760).reshape(10, 576)
     transductive_learner = MockTestTransductiveLearner(X_labeled, y_labeled, X_unlabeled, "./config/model_config.yml")
     X_df, y_df = transductive_learner.run()
 
-    assert X_df.shape == (10, 14401)
+    assert X_df.shape == (10, 577)
     assert y_df.shape == (10, 2)
     assert X_df["id"].values.tolist() == list(reversed(range(10)))
