@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 def test_run():
     X_labeled = np.arange(0, 5760).reshape(10, 576)
     X_labeled -= 2000
-    y_labeled = np.zeros(10)
+    y_labeled = np.ones(10)
     X_unlabeled = np.arange(0, 5760).reshape(10, 576)
     with open("./tests/config/training_config.yml", "r") as f:
         training_config: Dict = yaml.load(f, yaml.CLoader)

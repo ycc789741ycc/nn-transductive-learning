@@ -1,4 +1,5 @@
 import argparse
+import logging
 from pathlib import Path
 from typing import Dict, Text, Tuple
 
@@ -14,6 +15,21 @@ from models.lightning import LightningTransductiveLearner
 MODEL_CONFIG_PATH = "./config/model_config.yml"
 TRAINING_CONFIG_PATH = "./config/training_config.yml"
 DEFAULT_OUTPUTS_DIR = "./outputs"
+
+
+def configure_logging():
+    """Configure logging for the application."""
+    # Set the logger level
+    logging.getLogger(__name__).setLevel(logging.INFO)
+    logging.getLogger("models").setLevel(logging.INFO)
+
+    # Set the stream handler
+    formatter = logging.Formatter("%(asctime)s [%(levelname)s] %(name)s  - %(message)s")
+    stream_handler = logging.StreamHandler()
+    stream_handler.setLevel(logging.INFO)
+    stream_handler.setFormatter(formatter)
+    logging.getLogger(__name__).addHandler(stream_handler)
+    logging.getLogger("models").addHandler(stream_handler)
 
 
 def create_argument_parser() -> argparse.ArgumentParser:
@@ -206,6 +222,7 @@ def tsne_visualization(
 
 
 def main():
+    configure_logging()
     arg_parser = create_argument_parser()
     X_labeled, y_labeled, X_unlabeled = get_data_from_parser(arg_parser)
     X_model_labeld, y_model_labeled = get_labeled_data_from_transductive_learning(
