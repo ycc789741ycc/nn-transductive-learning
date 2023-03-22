@@ -161,3 +161,4 @@ cython_debug/
 
 **/tmp/*
 **/lightning_logs/*
+outputs/*

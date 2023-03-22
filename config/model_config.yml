@@ -1,5 +1,5 @@
 fully-connected-layers:
-  - input: 576
+  - input: 384
     output: 512
     dropout: 0.5
 

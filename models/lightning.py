@@ -54,10 +54,7 @@ class LightningTransductiveLearner(TransductiveLearner):
         model = LightningNNClassifier(self.model_config)
         checkpoint_callback = ModelCheckpoint(save_top_k=1, verbose=True, monitor="valid_acc", mode="max")
         early_stopping = EarlyStopping(monitor="valid_acc", patience=5, mode="max", verbose=True)
-        # trainer = pl.Trainer(max_epochs=self.max_epochs, callbacks=[checkpoint_callback, early_stopping])
-        trainer = pl.Trainer(
-            max_epochs=self.max_epochs, callbacks=[checkpoint_callback, early_stopping], overfit_batches=0.2
-        )
+        trainer = pl.Trainer(max_epochs=self.max_epochs, callbacks=[checkpoint_callback, early_stopping])
         trainer.fit(model=model, train_dataloaders=train_dataloader, val_dataloaders=valid_dataloader)
         self.best_model_path = checkpoint_callback.best_model_path
 
